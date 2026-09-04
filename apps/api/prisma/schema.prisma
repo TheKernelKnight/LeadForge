@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  savedLeads    SavedLead[]
+  campaigns     Campaign[]
+  searches      Search[]
+  tags          Tag[]
+  notes         Note[]
+}
+model Business {
+  id              String    @id @default(cuid())
+  providerId      String?   @unique
+  name            String
+  category        String?
+  industry        String?
+  description     String?
+  employeeCount   Int?
+  employeeRange   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  locations       BusinessLocation[]
+  contacts        BusinessContact[]
+  websites        BusinessWebsite[]
+  socials         BusinessSocial[]
+  signals         BusinessSignal[]
+  savedLeads      SavedLead[]
+  campaignLeads   CampaignLead[]
+  searchResults   SearchResult[]
+  leadScores      LeadScore[]
+  enrichmentJobs  EnrichmentJob[]
+}
+model BusinessLocation {
+  id          String    @id @default(cuid())
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  country     String?
+  region      String?
+  city        String?
+  postalCode  String?
+  address     String?
+  latitude    Float?
+  longitude   Float?
+  createdAt   DateTime  @default(now())
+}
+model BusinessContact {
+  id              String    @id @default(cuid())
+  businessId      String
+  business        Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  type            String
+  value           String
+  normalizedValue String?
+  countryCode     String?
+  source          String?
+  sourceUrl       String?
+  confidence      Float?
+  verifiedAt      DateTime?
+  createdAt       DateTime  @default(now())
+}
+model BusinessWebsite {
+  id              String    @id @default(cuid())
+  businessId      String
+  business        Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  url             String    @unique
+  status          Int?
+  https           Boolean?
+  title           String?
+  description     String?
+  technology      String[]
+  bookingProvider String?
+  bookingUrl      String?
+  hasContactForm  Boolean?
+  hasCta          Boolean?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+model BusinessSocial {
+  id          String    @id @default(cuid())
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  platform    String
+  url         String
+  source      String?
+  createdAt   DateTime  @default(now())
+}
+model BusinessSignal {
+  id          String    @id @default(cuid())
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  type        String
+  value       String?
+  source      String?
+  confidence  Float?
+  createdAt   DateTime  @default(now())
+}
+model LeadScore {
+  id          String    @id @default(cuid())
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  score       Int
+  reasons     Json
+  calculatedAt DateTime @default(now())
+}
+model SavedLead {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  status      String    @default("NEW")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  @@unique([userId, businessId])
+  tags        LeadTag[]
+  notes       Note[]
+}
+model Campaign {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  leads       CampaignLead[]
+}
+model CampaignLead {
+  id          String    @id @default(cuid())
+  campaignId  String
+  campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  status      String    @default("NEW")
+  notes       String?
+  addedAt     DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  @@unique([campaignId, businessId])
+}
+model Search {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query       Json
+  results     Int
+  createdAt   DateTime  @default(now())
+  searchResults SearchResult[]
+}
+model SearchResult {
+  id          String    @id @default(cuid())
+  searchId    String
+  search      Search    @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  position    Int
+}
+model EnrichmentJob {
+  id          String    @id @default(cuid())
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  type        String
+  status      String    @default("PENDING")
+  progress    Int       @default(0)
+  error       String?
+  result      Json?
+  retries     Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+model Tag {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  color       String?
+  createdAt   DateTime  @default(now())
+  @@unique([userId, name])
+  leads       LeadTag[]
+}
+model LeadTag {
+  id          String    @id @default(cuid())
+  leadId      String
+  lead        SavedLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tagId       String
+  tag         Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  @@unique([leadId, tagId])
+}
+model Note {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leadId      String
+  lead        SavedLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  content     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
